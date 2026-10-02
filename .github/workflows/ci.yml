@@ -69,6 +69,7 @@ jobs:
       - run: docker compose up -d --build
       - run: node scripts/smoke.mjs
       - run: node scripts/chaos.mjs
+      - run: node scripts/seed.mjs && node scripts/seed.mjs
       - run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: apps/console
       - if: always()
