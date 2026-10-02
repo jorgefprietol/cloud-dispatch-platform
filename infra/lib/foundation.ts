@@ -30,7 +30,7 @@ export class FoundationStack extends Stack {
     deploy.addToPolicy(new iam.PolicyStatement({actions:['cloudformation:DescribeStacks','cloudformation:DescribeStackEvents','cloudformation:GetTemplate'],resources:[`arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/CloudDispatch*/*`]}));
     deploy.addToPolicy(new iam.PolicyStatement({actions:['ssm:GetParameter'],resources:[`arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*/version`]}));
     deploy.addToPolicy(new iam.PolicyStatement({actions:['ecr:GetAuthorizationToken'],resources:['*']}));
-    for(const repository of Object.values(this.repositories)) repository.grantPullPush(deploy);
+    for(const repository of Object.values(this.repositories)) {repository.grantPullPush(deploy);repository.grantRead(deploy);}
     new CfnOutput(this,'DeploymentRoleArn',{value:deploy.roleArn});
     new CfnOutput(this,'OidcProviderArn',{value:provider.openIdConnectProviderArn});
   }

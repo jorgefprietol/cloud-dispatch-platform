@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ArrowRight, Check, Circle, Download, Layers, LayoutDashboard, Package, Plus, RefreshCw, Search, ShieldCheck, Truck, X, Zap, LogOut } from 'lucide-react';
 import { api, Dashboard, Order, initializeAuth, signedIn, login, logout, isDemo, downloadReport } from './api';
 import './styles.css';
+import {useDialog} from './useDialog';
 
 const money = (n:number) => new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
 const date = (s:string) => new Intl.DateTimeFormat('es-EC',{dateStyle:'medium',timeStyle:'short'}).format(new Date(s));
@@ -11,6 +12,7 @@ function App() {
   const [orders,setOrders] = useState<Order[]>([]), [stats,setStats] = useState<Dashboard>({total:0,queued:0,dispatched:0,volume:0});
   const [error,setError] = useState(''), [loading,setLoading] = useState(false), [modal,setModal] = useState(false), [selected,setSelected] = useState<Order|null>(null);
   const [query,setQuery] = useState(''), [filter,setFilter] = useState('all'), [view,setView] = useState('overview'), [lastUpdate,setLastUpdate] = useState<Date|null>(null);
+  useDialog(selected!==null,()=>setSelected(null));
   useEffect(() => { initializeAuth().then(async () => { setAuthenticated(await signedIn()); setReady(true); }).catch(e => { setError(e.message); setReady(true); }); },[]);
   async function refresh(manual = false) {
     if (manual) setLoading(true);
@@ -49,6 +51,7 @@ function NewOrder({onClose,onCreated}:{onClose:()=>void;onCreated:()=>void}) {
   const [busy,setBusy] = useState(false), [error,setError] = useState('');
   const [customer,setCustomer]=useState(''),[destination,setDestination]=useState(''),[priority,setPriority]=useState('standard'),[amount,setAmount]=useState('');
   const [retry,setRetry]=useState<{payload:string;key:string}|null>(null);
+  useDialog(true,()=>{if(!busy)onClose();});
   async function submit(e:React.FormEvent) {
     e.preventDefault();if(busy)return;setBusy(true);setError('');
     const payload=JSON.stringify({customer:customer.trim(),destination:destination.trim(),priority,amount:Number(amount)});

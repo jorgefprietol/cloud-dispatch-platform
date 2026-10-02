@@ -47,8 +47,15 @@ jobs:
             infra/package-lock.json
       - run: npm ci && npm run build && npm audit --omit=dev --audit-level=high
         working-directory: apps/console
-      - run: npm ci && npm run build && npm test && npm run synth
+      - run: npm ci && npm run build && npm test && npm audit --audit-level=high && npm run synth
         working-directory: infra
+      - name: Synthesize complete AWS topology offline
+        working-directory: infra
+        run: |
+          npx cdk synth --quiet -c offline=true -c runtime=true \
+            -c domain=dispatch.example.com -c zoneName=example.com -c zoneId=Z000TEST \
+            -c certificateArn=arn:aws:acm:us-east-1:111111111111:certificate/00000000-0000-0000-0000-000000000000 \
+            -c imageTag=test
   integration:
     name: Container integration
     runs-on: ubuntu-latest

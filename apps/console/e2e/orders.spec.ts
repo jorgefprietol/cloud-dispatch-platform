@@ -19,3 +19,19 @@ test('responsive console renders without horizontal page overflow',async({page})
   await expect(page.getByRole('button',{name:'Nuevo pedido',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
+test('retry after a lost response does not create a second order',async({page})=>{
+  const customer=`Retry ${Date.now()}`;let intercepted=false;let originalId='';
+  await page.route('**/api/orders',async route=>{
+    if(route.request().method()==='POST'&&!intercepted){
+      intercepted=true;const response=await route.fetch();expect(response.status()).toBe(201);originalId=(await response.json()).id;
+      await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Respuesta interrumpida; reintenta el pedido.'})});
+    }else await route.continue();
+  });
+  await page.goto('/');await page.getByRole('button',{name:'Nuevo pedido',exact:true}).click();
+  await page.getByLabel('Cliente',{exact:true}).fill(customer);await page.getByLabel('Destino',{exact:true}).fill('Manta');await page.getByLabel('Importe (USD)',{exact:true}).fill('99.99');
+  await page.getByRole('button',{name:'Registrar pedido',exact:true}).click();await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Respuesta interrumpida');
+  await page.getByRole('button',{name:'Registrar pedido',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByLabel('Buscar pedidos').fill(customer);await expect(page.getByRole('row').filter({hasText:customer})).toHaveCount(1);
+  await page.getByRole('button',{name:customer,exact:true}).click();await expect(page.getByRole('dialog')).toContainText(originalId);
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+});

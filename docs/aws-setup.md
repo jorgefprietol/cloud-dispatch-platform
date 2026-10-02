@@ -22,6 +22,8 @@ No crear access keys para GitHub. La autenticación del pipeline usa credenciale
 
 ## Bootstrap inicial
 
+Para revisar ambas plantillas sin credenciales, sintetizar con `-c offline=true -c runtime=true` y los parámetros de ejemplo de la validación CI. El modo offline fija una cuenta ficticia y zonas de prueba; nunca usarlo para desplegar. La librería CDK se fija a una versión validada cuyo árbol de dependencias supera la auditoría de seguridad.
+
 Instalar AWS CLI y usar un perfil autorizado mediante IAM Identity Center o credenciales temporales. Sustituir los ejemplos por la cuenta y región reales.
 
 ```sh
@@ -69,6 +71,8 @@ aws cognito-idp admin-create-user --user-pool-id USER_POOL_ID \
 Completar cambio de contraseña y enrolamiento TOTP en el inicio de sesión. Cognito usa el callback exacto `https://APP_DOMAIN/auth/callback`; el frontend usa Authorization Code + PKCE y envía el ID token con audiencia del cliente. La API verifica firma, issuer, audiencia, caducidad, `token_use=id` y subject.
 
 La base de datos exige TLS con verificación completa; el contenedor de API incluye el bundle de CA oficial de RDS. Redis utiliza TLS y token de autenticación. Los secretos se inyectan en tareas; una rotación exige reiniciar las tareas afectadas de forma coordinada.
+
+Las decisiones de validación siguen la [documentación de tokens Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html), y la conexión a PostgreSQL sigue la [verificación TLS de RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.SSL.html). La imagen de auditoría usa el [runtime .NET para Lambda en contenedores](https://docs.aws.amazon.com/lambda/latest/dg/csharp-image.html).
 
 ## Validación posterior
 

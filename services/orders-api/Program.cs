@@ -33,7 +33,8 @@ builder.Services.AddRateLimiter(options =>
 var connectionString = config.GetConnectionString("Orders") ?? new NpgsqlConnectionStringBuilder
 {
     Host = config["Database:Host"], Database = "dispatch", Username = "dispatch",
-    Password = config["Database:Password"], SslMode = SslMode.VerifyFull, RootCertificate = config["Database:RootCertificate"]
+    Password = config["Database:Password"], SslMode = SslMode.VerifyFull, RootCertificate = config["Database:RootCertificate"],
+    MaxPoolSize = 10, Timeout = 5, CommandTimeout = 15
 }.ConnectionString;
 builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
 builder.Services.AddSingleton<Store>();

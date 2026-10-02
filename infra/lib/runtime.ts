@@ -21,7 +21,8 @@ import * as waf from 'aws-cdk-lib/aws-wafv2';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as backup from 'aws-cdk-lib/aws-backup';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
-import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ServicePrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -32,7 +33,7 @@ export class RuntimeStack extends Stack {
     const required = (name:string) => {const value=this.node.tryGetContext(name);if(!value)throw new Error(`Missing CDK context: ${name}`);return value as string;};
     const domain=required('domain'), certificateArn=required('certificateArn'), zoneId=required('zoneId'), imageTag=required('imageTag');
     const zoneName=required('zoneName');
-    const f=props.foundation, key=f.key;
+    const f=props.foundation, key=kms.Key.fromKeyArn(this,'EncryptionKey',f.key.keyArn);
     const vpc=new ec2.Vpc(this,'Vpc',{maxAzs:2,natGateways:2,subnetConfiguration:[
       {name:'edge',subnetType:ec2.SubnetType.PUBLIC}, {name:'application',subnetType:ec2.SubnetType.PRIVATE_WITH_EGRESS}, {name:'data',subnetType:ec2.SubnetType.PRIVATE_ISOLATED}
     ]});
@@ -67,7 +68,7 @@ export class RuntimeStack extends Stack {
     const auditTable=new dynamodb.Table(this,'AuditTable',{partitionKey:{name:'pk',type:dynamodb.AttributeType.STRING},sortKey:{name:'sk',type:dynamodb.AttributeType.STRING},billingMode:dynamodb.BillingMode.PAY_PER_REQUEST,encryption:dynamodb.TableEncryption.CUSTOMER_MANAGED,encryptionKey:key,pointInTimeRecoverySpecification:{pointInTimeRecoveryEnabled:true},timeToLiveAttribute:'expiresAt',removalPolicy:RemovalPolicy.RETAIN});
     const auditFunction=new lambda.DockerImageFunction(this,'AuditFunction',{code:lambda.DockerImageCode.fromEcr(f.repositories.audit,{tagOrDigest:imageTag}),timeout:Duration.seconds(30),memorySize:512,environment:{AUDIT_TABLE:auditTable.tableName},loggingFormat:lambda.LoggingFormat.JSON});
     auditFunction.addEventSource(new sources.SqsEventSource(archive,{batchSize:10,reportBatchItemFailures:true}));auditTable.grantWriteData(auditFunction);
-    key.grantEncryptDecrypt(new ServicePrincipal('sns.amazonaws.com'));
+    f.key.addToResourcePolicy(new PolicyStatement({principals:[new ServicePrincipal('sns.amazonaws.com')],actions:['kms:Decrypt','kms:GenerateDataKey*'],resources:['*'],conditions:{StringEquals:{'aws:SourceAccount':this.account}}}));
     const workerSecret=new secrets.Secret(this,'WorkerSecret',{encryptionKey:key,generateSecretString:{passwordLength:48,excludePunctuation:true}});
     const users=new cognito.UserPool(this,'Users',{selfSignUpEnabled:false,signInAliases:{email:true},mfa:cognito.Mfa.REQUIRED,mfaSecondFactor:{otp:true,sms:false},
       passwordPolicy:{minLength:14,requireDigits:true,requireLowercase:true,requireUppercase:true,requireSymbols:true},removalPolicy:RemovalPolicy.RETAIN});
@@ -79,7 +80,7 @@ export class RuntimeStack extends Stack {
       const container=task.addContainer(name,{image:ecs.ContainerImage.fromEcrRepository(f.repositories[name],imageTag),logging:ecs.LogDrivers.awsLogs({streamPrefix:name,logGroup}),environment,secrets:taskSecrets,readonlyRootFilesystem:false});
       if(name!=='worker')container.addPortMappings({containerPort:8080});
       const service=new ecs.FargateService(this,`${name}Service`,{cluster,taskDefinition:task,desiredCount:desired,securityGroups:[group],vpcSubnets:{subnetType:ec2.SubnetType.PRIVATE_WITH_EGRESS},assignPublicIp:false,
-        circuitBreaker:{rollback:true},enableExecuteCommand:false,cloudMapOptions:name==='api'?{name:'orders-api'}:undefined,healthCheckGracePeriod:name==='web'?Duration.seconds(60):undefined});
+        circuitBreaker:{rollback:true},minHealthyPercent:100,maxHealthyPercent:200,enableExecuteCommand:false,cloudMapOptions:name==='api'?{name:'orders-api'}:undefined,healthCheckGracePeriod:name==='web'?Duration.seconds(60):undefined});
       service.node.addDependency(database,cache);
       const scaling=service.autoScaleTaskCount({minCapacity:desired,maxCapacity:6});scaling.scaleOnCpuUtilization('CpuScaling',{targetUtilizationPercent:60,scaleInCooldown:Duration.minutes(3),scaleOutCooldown:Duration.seconds(60)});
       return {service,task};

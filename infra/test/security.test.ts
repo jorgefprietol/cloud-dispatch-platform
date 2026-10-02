@@ -5,7 +5,7 @@ import {Template,Match} from 'aws-cdk-lib/assertions';
 import {FoundationStack} from '../lib/foundation';
 import {RuntimeStack} from '../lib/runtime';
 test('production infrastructure isolates data, encrypts storage, and requires GitHub environment identity',()=>{
-  const app=new App({context:{'@aws-cdk/aws-kms:defaultKeyPolicies':true,repository:'jorgefprietol/cloud-dispatch-platform',domain:'dispatch.example.com',zoneName:'example.com',zoneId:'Z000TEST',certificateArn:'arn:aws:acm:us-east-1:111111111111:certificate/00000000-0000-0000-0000-000000000000',imageTag:'test'}});
+  const app=new App({context:{repository:'jorgefprietol/cloud-dispatch-platform',domain:'dispatch.example.com',zoneName:'example.com',zoneId:'Z000TEST',certificateArn:'arn:aws:acm:us-east-1:111111111111:certificate/00000000-0000-0000-0000-000000000000',imageTag:'test'}});
   const env={account:'111111111111',region:'us-east-1'};const foundation=new FoundationStack(app,'Foundation',{env});
   const runtime=new RuntimeStack(app,'Runtime',{env,foundation});const template=Template.fromStack(runtime);
   template.hasResourceProperties('AWS::RDS::DBInstance',{PubliclyAccessible:false,MultiAZ:true,StorageEncrypted:true,DeletionProtection:true});
