@@ -69,6 +69,7 @@ export class RuntimeStack extends Stack {
     const auditFunction=new lambda.DockerImageFunction(this,'AuditFunction',{code:lambda.DockerImageCode.fromEcr(f.repositories.audit,{tagOrDigest:imageTag}),timeout:Duration.seconds(30),memorySize:512,environment:{AUDIT_TABLE:auditTable.tableName},loggingFormat:lambda.LoggingFormat.JSON});
     auditFunction.addEventSource(new sources.SqsEventSource(archive,{batchSize:10,reportBatchItemFailures:true}));auditTable.grantWriteData(auditFunction);
     f.key.addToResourcePolicy(new PolicyStatement({principals:[new ServicePrincipal('sns.amazonaws.com')],actions:['kms:Decrypt','kms:GenerateDataKey*'],resources:['*'],conditions:{StringEquals:{'aws:SourceAccount':this.account}}}));
+    f.key.addToResourcePolicy(new PolicyStatement({principals:[new ServicePrincipal('cloudwatch.amazonaws.com')],actions:['kms:Decrypt','kms:GenerateDataKey*'],resources:['*'],conditions:{StringEquals:{'aws:SourceAccount':this.account}}}));
     const workerSecret=new secrets.Secret(this,'WorkerSecret',{encryptionKey:key,generateSecretString:{passwordLength:48,excludePunctuation:true}});
     const users=new cognito.UserPool(this,'Users',{selfSignUpEnabled:false,signInAliases:{email:true},mfa:cognito.Mfa.REQUIRED,mfaSecondFactor:{otp:true,sms:false},
       passwordPolicy:{minLength:14,requireDigits:true,requireLowercase:true,requireUppercase:true,requireSymbols:true},removalPolicy:RemovalPolicy.RETAIN});
@@ -82,8 +83,9 @@ export class RuntimeStack extends Stack {
       const service=new ecs.FargateService(this,`${name}Service`,{cluster,taskDefinition:task,desiredCount:desired,securityGroups:[group],vpcSubnets:{subnetType:ec2.SubnetType.PRIVATE_WITH_EGRESS},assignPublicIp:false,
         circuitBreaker:{rollback:true},minHealthyPercent:100,maxHealthyPercent:200,enableExecuteCommand:false,cloudMapOptions:name==='api'?{name:'orders-api'}:undefined,healthCheckGracePeriod:name==='web'?Duration.seconds(60):undefined});
       service.node.addDependency(database,cache);
-      const scaling=service.autoScaleTaskCount({minCapacity:desired,maxCapacity:6});scaling.scaleOnCpuUtilization('CpuScaling',{targetUtilizationPercent:60,scaleInCooldown:Duration.minutes(3),scaleOutCooldown:Duration.seconds(60)});
-      return {service,task};
+      const scaling=service.autoScaleTaskCount({minCapacity:desired,maxCapacity:6});
+      if(name!=='worker')scaling.scaleOnCpuUtilization('CpuScaling',{targetUtilizationPercent:60,scaleInCooldown:Duration.minutes(3),scaleOutCooldown:Duration.seconds(60)});
+      return {service,task,scaling};
     };
     const api=createService('api',apiGroup,{ASPNETCORE_ENVIRONMENT:'Production',Database__Host:database.dbInstanceEndpointAddress,Database__RootCertificate:'/app/rds-ca-bundle.pem',Redis__Host:cache.attrPrimaryEndPointAddress,AWS__Region:this.region,AWS__QueueUrl:queue.queueUrl,AWS__Bucket:reports.bucketName,Auth__Authority:`https://cognito-idp.${this.region}.amazonaws.com/${users.userPoolId}`,Auth__Audience:client.userPoolClientId},
       {Database__Password:ecs.Secret.fromSecretsManager(database.secret!,'password'),Redis__Password:ecs.Secret.fromSecretsManager(redisSecret),Worker__Secret:ecs.Secret.fromSecretsManager(workerSecret)},1024,2);
@@ -91,6 +93,7 @@ export class RuntimeStack extends Stack {
     const worker=createService('worker',workerGroup,{AWS_REGION:this.region,QUEUE_URL:queue.queueUrl,REPORT_BUCKET:reports.bucketName,ORDERS_API_URL:'http://orders-api.dispatch.local:8080',NOTIFICATION_TOPIC_ARN:completions.topicArn},
       {WORKER_SECRET:ecs.Secret.fromSecretsManager(workerSecret)},1024,2);
     queue.grantConsumeMessages(worker.task.taskRole);reports.grantPut(worker.task.taskRole,'dispatch/*');completions.grantPublish(worker.task.taskRole);
+    worker.scaling.scaleOnMetric('BacklogScaling',{metric:queue.metricApproximateNumberOfMessagesVisible({period:Duration.minutes(1)}),cooldown:Duration.minutes(2),scalingSteps:[{upper:5,change:-1},{lower:5,upper:30,change:0},{lower:30,upper:100,change:1},{lower:100,change:2}]});
     const web=createService('web',webGroup,{API_UPSTREAM:'orders-api.dispatch.local:8080',AUTH_MODE:'cognito',OIDC_AUTHORITY:`https://cognito-idp.${this.region}.amazonaws.com/${users.userPoolId}`,OIDC_CLIENT_ID:client.userPoolClientId,OIDC_REDIRECT_URI:`https://${domain}/auth/callback`},{},1024,2);
     const balancer=new elb.ApplicationLoadBalancer(this,'LoadBalancer',{vpc,internetFacing:true,dropInvalidHeaderFields:true});
     balancer.addListener('Http',{port:80,defaultAction:elb.ListenerAction.redirect({protocol:'HTTPS',port:'443',permanent:true})});
