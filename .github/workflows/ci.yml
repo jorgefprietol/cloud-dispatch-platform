@@ -47,7 +47,7 @@ jobs:
             infra/package-lock.json
       - run: npm ci && npm run build && npm audit --omit=dev --audit-level=high
         working-directory: apps/console
-      - run: npm ci && npm run build && npm test && npm audit --audit-level=high && npm run synth
+      - run: npm ci && npm run build && npm test && npm run audit && npm run synth
         working-directory: infra
       - name: Synthesize complete AWS topology offline
         working-directory: infra

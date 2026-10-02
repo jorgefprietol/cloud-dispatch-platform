@@ -22,7 +22,7 @@ No crear access keys para GitHub. La autenticación del pipeline usa credenciale
 
 ## Bootstrap inicial
 
-Para revisar ambas plantillas sin credenciales, sintetizar con `-c offline=true -c runtime=true` y los parámetros de ejemplo de la validación CI. El modo offline fija una cuenta ficticia y zonas de prueba; nunca usarlo para desplegar. La librería CDK se fija a una versión validada cuyo árbol de dependencias supera la auditoría de seguridad.
+Para revisar ambas plantillas sin credenciales, sintetizar con `-c offline=true -c runtime=true` y los parámetros de ejemplo de la validación CI. El modo offline fija una cuenta ficticia y zonas de prueba; nunca usarlo para desplegar. La librería CDK se fija a una versión validada; revisar el procedimiento de auditoría y reparación de su dependencia incluida en `SECURITY.md`.
 
 Instalar AWS CLI y usar un perfil autorizado mediante IAM Identity Center o credenciales temporales. Sustituir los ejemplos por la cuenta y región reales.
 

@@ -7,3 +7,9 @@ El modo local utiliza una identidad de desarrollo, credenciales exclusivamente l
 En AWS se exige HTTPS externo, validación JWT, MFA, PKCE, RDS TLS, Redis TLS, cifrado KMS y permisos por servicio. El secreto interno se compara en tiempo constante. La protección del environment GitHub y los permisos de bootstrap CDK deben revisarse en la cuenta de destino.
 
 Actualizar dependencias, revisar ECR y evaluar controles de cuenta antes de exponer datos reales. Las pruebas sintetizadas no sustituyen pruebas de autorización multiusuario ni una revisión de seguridad del despliegue cloud.
+
+## Dependencia incluida por AWS CDK
+
+CDK 2.272.0 incluye `brace-expansion` 5.0.9 dentro de su tarball. npm no reemplaza ese componente mediante overrides. `infra` instala la versión oficial 5.0.12, fijada y verificada por el lockfile, y su `postinstall` copia esa implementación y licencia sobre el componente incluido.
+
+`npm run audit` verifica la versión y hashes de los archivos ejecutables reparados. Acepta únicamente los tres avisos de metadata del componente reemplazado ([GHSA-q2hr-2g5m-vwhr](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr), [GHSA-qhr7-859c-m2p7](https://github.com/advisories/GHSA-qhr7-859c-m2p7), [GHSA-6j4f-fj2g-mc7p](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p)) y falla ante cualquier otro hallazgo. Los escáneres que solo examinan el tarball base pueden seguir mostrando esos avisos. No omitir scripts al instalar infraestructura. Eliminar esta reparación cuando una versión actualizada de CDK incluya el componente corregido y pase todas las verificaciones.

@@ -95,6 +95,6 @@ networks:
   backend:
     ipam:
       config:
-        - subnet: ${DOCKER_SUBNET:-10.203.74.0/24}
+        - subnet: ${DOCKER_SUBNET:-10.253.147.0/24}
 volumes:
   postgres-data:
