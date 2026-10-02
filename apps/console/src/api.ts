@@ -1,13 +1,14 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 export type Order = { id:string; customer:string; destination:string; priority:'standard'|'express'; amount:number; status:'queued'|'dispatched'; createdAt:string; trackingCode:string|null; reportKey:string|null };
 export type Dashboard = { total:number; queued:number; dispatched:number; volume:number };
-type Config = { authMode:string; authority:string; clientId:string; redirectUri:string };
+type Config = { authMode:string; authority:string; clientId:string; redirectUri:string; logoutUrl?:string };
 let manager: UserManager | undefined;
 let demo = false;
+let logoutUrl = '';
 export async function initializeAuth() {
   const response = await fetch('/config.json');
   if (!response.ok) throw new Error('No se pudo cargar la configuración.');
-  const config:Config = await response.json(); demo = config.authMode === 'demo';
+  const config:Config = await response.json(); demo = config.authMode === 'demo'; logoutUrl = config.logoutUrl || '';
   if (!demo) {
     if (!config.authority || !config.clientId || !config.redirectUri) throw new Error('La autenticación no está configurada.');
     manager = new UserManager({ authority:config.authority, client_id:config.clientId, redirect_uri:config.redirectUri, response_type:'code', scope:'openid email profile', userStore:new WebStorageStateStore({store:sessionStorage}), automaticSilentRenew:false });
@@ -17,7 +18,7 @@ export async function initializeAuth() {
 }
 export async function signedIn() { if (demo) return true; const user = await manager?.getUser(); return !!user && !user.expired; }
 export async function login() { await manager?.signinRedirect(); }
-export async function logout() { await manager?.removeUser(); location.reload(); }
+export async function logout() { await manager?.removeUser(); if(logoutUrl)location.assign(logoutUrl);else location.reload(); }
 export function isDemo() { return demo; }
 async function headers() {
   const user = await manager?.getUser();

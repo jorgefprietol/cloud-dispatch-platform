@@ -73,7 +73,7 @@ export class RuntimeStack extends Stack {
     const workerSecret=new secrets.Secret(this,'WorkerSecret',{encryptionKey:key,generateSecretString:{passwordLength:48,excludePunctuation:true}});
     const users=new cognito.UserPool(this,'Users',{selfSignUpEnabled:false,signInAliases:{email:true},mfa:cognito.Mfa.REQUIRED,mfaSecondFactor:{otp:true,sms:false},
       passwordPolicy:{minLength:14,requireDigits:true,requireLowercase:true,requireUppercase:true,requireSymbols:true},removalPolicy:RemovalPolicy.RETAIN});
-    const client=users.addClient('ConsoleClient',{generateSecret:false,preventUserExistenceErrors:true,oAuth:{flows:{authorizationCodeGrant:true},scopes:[cognito.OAuthScope.OPENID,cognito.OAuthScope.EMAIL,cognito.OAuthScope.PROFILE],callbackUrls:[`https://${domain}/auth/callback`]},supportedIdentityProviders:[cognito.UserPoolClientIdentityProvider.COGNITO]});
+    const client=users.addClient('ConsoleClient',{generateSecret:false,preventUserExistenceErrors:true,oAuth:{flows:{authorizationCodeGrant:true},scopes:[cognito.OAuthScope.OPENID,cognito.OAuthScope.EMAIL,cognito.OAuthScope.PROFILE],callbackUrls:[`https://${domain}/auth/callback`],logoutUrls:[`https://${domain}/`]},supportedIdentityProviders:[cognito.UserPoolClientIdentityProvider.COGNITO]});
     users.addDomain('LoginDomain',{cognitoDomain:{domainPrefix:`cloud-dispatch-${this.account}-${this.region}`}});
     const createService=(name:string,group:ec2.SecurityGroup,environment:Record<string,string>,taskSecrets:Record<string,ecs.Secret>,memory:number,desired:number) => {
       const task=new ecs.FargateTaskDefinition(this,`${name}Task`,{cpu:512,memoryLimitMiB:memory});
@@ -94,7 +94,7 @@ export class RuntimeStack extends Stack {
       {WORKER_SECRET:ecs.Secret.fromSecretsManager(workerSecret)},1024,2);
     queue.grantConsumeMessages(worker.task.taskRole);reports.grantPut(worker.task.taskRole,'dispatch/*');completions.grantPublish(worker.task.taskRole);
     worker.scaling.scaleOnMetric('BacklogScaling',{metric:queue.metricApproximateNumberOfMessagesVisible({period:Duration.minutes(1)}),cooldown:Duration.minutes(2),scalingSteps:[{upper:5,change:-1},{lower:5,upper:30,change:0},{lower:30,upper:100,change:1},{lower:100,change:2}]});
-    const web=createService('web',webGroup,{API_UPSTREAM:'orders-api.dispatch.local:8080',AUTH_MODE:'cognito',OIDC_AUTHORITY:`https://cognito-idp.${this.region}.amazonaws.com/${users.userPoolId}`,OIDC_CLIENT_ID:client.userPoolClientId,OIDC_REDIRECT_URI:`https://${domain}/auth/callback`},{},1024,2);
+    const web=createService('web',webGroup,{API_UPSTREAM:'orders-api.dispatch.local:8080',AUTH_MODE:'cognito',OIDC_AUTHORITY:`https://cognito-idp.${this.region}.amazonaws.com/${users.userPoolId}`,OIDC_CLIENT_ID:client.userPoolClientId,OIDC_REDIRECT_URI:`https://${domain}/auth/callback`,OIDC_LOGOUT_URL:`https://cloud-dispatch-${this.account}-${this.region}.auth.${this.region}.amazoncognito.com/logout?client_id=${client.userPoolClientId}&logout_uri=${encodeURIComponent(`https://${domain}/`)}`},{},1024,2);
     const balancer=new elb.ApplicationLoadBalancer(this,'LoadBalancer',{vpc,internetFacing:true,dropInvalidHeaderFields:true});
     balancer.addListener('Http',{port:80,defaultAction:elb.ListenerAction.redirect({protocol:'HTTPS',port:'443',permanent:true})});
     const listener=balancer.addListener('Https',{port:443,certificates:[acm.Certificate.fromCertificateArn(this,'Certificate',certificateArn)],sslPolicy:elb.SslPolicy.RECOMMENDED_TLS});
