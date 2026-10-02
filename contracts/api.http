@@ -1,0 +1,17 @@
+@base = http://localhost:18140
+
+### Readiness
+GET {{base}}/health/ready
+
+### Register a local order (change key for each logical request)
+POST {{base}}/api/orders
+Content-Type: application/json
+Idempotency-Key: 850a531b-e65e-48bc-b9d2-dbded530d0d3
+
+{"customer":"Northwind Logistics","destination":"Guayaquil","priority":"express","amount":149.75}
+
+### Latest 100 orders
+GET {{base}}/api/orders
+
+### Dashboard
+GET {{base}}/api/dashboard

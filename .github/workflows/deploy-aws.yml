@@ -1,0 +1,85 @@
+name: Deploy AWS
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: Full commit SHA with a successful CI run on main
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+      CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+      HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+      HOSTED_ZONE_NAME: ${{ vars.HOSTED_ZONE_NAME }}
+      OIDC_PROVIDER_ARN: ${{ vars.OIDC_PROVIDER_ARN }}
+      ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+      IMAGE_SHA: ${{ inputs.image_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check configuration and release provenance
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'A full commit SHA is required'; exit 1; }
+          for name in AWS_REGION AWS_ACCOUNT_ID AWS_ROLE_ARN APP_DOMAIN CERTIFICATE_ARN HOSTED_ZONE_ID HOSTED_ZONE_NAME; do
+            test -n "${!name}" || { echo "Missing production variable: $name"; exit 1; }
+          done
+          gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?head_sha=$IMAGE_SHA&branch=main&event=push&status=success" --jq '.workflow_runs | length' | grep -qE '^[1-9][0-9]*$'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.image_sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+      - name: Copy verified images to ECR
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          for service in api worker web audit; do
+            source="ghcr.io/${{ github.repository }}-$service:sha-$IMAGE_SHA"
+            target="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-dispatch-$service:sha-$IMAGE_SHA"
+            docker pull "$source"
+            docker tag "$source" "$target"
+            if ! aws ecr describe-images --repository-name "cloud-dispatch-$service" --image-ids "imageTag=sha-$IMAGE_SHA" >/dev/null 2>&1; then
+              docker push "$target"
+            fi
+          done
+      - name: Deploy infrastructure and rolling services
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          npm test
+          npx cdk deploy --all --require-approval never --outputs-file outputs.json \
+            -c runtime=true -c "domain=$APP_DOMAIN" -c "zoneName=$HOSTED_ZONE_NAME" \
+            -c "zoneId=$HOSTED_ZONE_ID" -c "certificateArn=$CERTIFICATE_ARN" \
+            -c "imageTag=sha-$IMAGE_SHA" -c "oidcProviderArn=$OIDC_PROVIDER_ARN" -c "alertEmail=$ALERT_EMAIL"
+      - name: Verify application readiness
+        run: curl --fail --retry 20 --retry-delay 15 --retry-all-errors "https://$APP_DOMAIN/health/ready"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: aws-outputs
+          path: infra/outputs.json

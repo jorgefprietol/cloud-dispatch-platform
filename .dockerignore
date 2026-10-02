@@ -1,0 +1,9 @@
+**/node_modules
+**/bin
+**/obj
+**/target
+**/dist
+**/cdk.out
+.git
+.env*
+artifacts

@@ -1,0 +1,91 @@
+name: cloud-dispatch
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dispatch
+      POSTGRES_USER: dispatch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env}
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatch -d dispatch"]
+      interval: 5s
+      retries: 20
+    networks: [backend]
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+    networks: [backend]
+  localstack:
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3,sqs,sns
+      AWS_DEFAULT_REGION: us-east-1
+    volumes: ["./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/dispatch-ready"]
+      interval: 5s
+      retries: 40
+    networks: [backend]
+  api:
+    build:
+      context: .
+      dockerfile: services/orders-api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Auth__Demo: "true"
+      ConnectionStrings__Orders: Host=postgres;Database=dispatch;Username=dispatch;Password=${POSTGRES_PASSWORD}
+      Redis__Connection: redis:6379,abortConnect=false
+      AWS__Endpoint: http://localstack:4566
+      AWS__Region: us-east-1
+      AWS__QueueUrl: http://localstack:4566/000000000000/dispatch
+      AWS__Bucket: dispatch-reports
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      Worker__Secret: ${WORKER_SECRET:?Worker secret required}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      localstack: {condition: service_healthy}
+    networks: [backend]
+    restart: unless-stopped
+  worker:
+    build:
+      context: .
+      dockerfile: services/dispatch-worker/Dockerfile
+    environment:
+      QUEUE_URL: http://localstack:4566/000000000000/dispatch
+      REPORT_BUCKET: dispatch-reports
+      ORDERS_API_URL: http://api:8080
+      WORKER_SECRET: ${WORKER_SECRET}
+      AWS_ENDPOINT: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      api: {condition: service_started}
+      localstack: {condition: service_healthy}
+    networks: [backend]
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: apps/console/Dockerfile
+    ports: ["127.0.0.1:${WEB_PORT:-18140}:8080"]
+    environment:
+      API_UPSTREAM: api:8080
+      AUTH_MODE: demo
+      OIDC_AUTHORITY: ""
+      OIDC_CLIENT_ID: ""
+      OIDC_REDIRECT_URI: ""
+    depends_on: [api]
+    networks: [backend]
+    restart: unless-stopped
+networks:
+  backend:
+volumes:
+  postgres-data:

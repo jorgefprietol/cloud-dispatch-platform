@@ -1,0 +1,1 @@
+{"app":"npx tsx bin/app.ts","context":{"repository":"jorgefprietol/cloud-dispatch-platform","@aws-cdk/aws-ecs:enableImdsBlockingDeprecatedFeature":false}}

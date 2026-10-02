@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+services/**/bin/
+tests/**/bin/
+**/obj/
+**/target/
+**/node_modules/
+**/dist/
+**/cdk.out/
+**/test-results/
+**/playwright-report/
+*.user
+*.log
+.DS_Store
+artifacts/
+**/*.tsbuildinfo
