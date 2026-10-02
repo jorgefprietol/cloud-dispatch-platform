@@ -49,7 +49,7 @@ node scripts/smoke.mjs
 node scripts/seed.mjs
 ```
 
-En Linux/macOS, usar `cp .env.example .env`. Abrir **http://localhost:18140**. El puerto puede cambiarse con `WEB_PORT` en `.env`. Los servicios de datos y la API no publican puertos en el host. La identidad de desarrollo solo se habilita con `ASPNETCORE_ENVIRONMENT=Development` y `Auth__Demo=true`.
+En Linux/macOS, usar `cp .env.example .env`. Abrir **http://localhost:18140**. El puerto puede cambiarse con `WEB_PORT` en `.env`; `DOCKER_SUBNET` permite elegir una subred libre si otra red local ya utiliza la predeterminada. Los servicios de datos y la API no publican puertos en el host. La identidad de desarrollo solo se habilita con `ASPNETCORE_ENVIRONMENT=Development` y `Auth__Demo=true`.
 
 ```sh
 docker compose logs -f api worker

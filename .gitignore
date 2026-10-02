@@ -8,6 +8,7 @@ tests/**/bin/
 **/node_modules/
 **/dist/
 **/cdk.out/
+**/cdk.context.json
 **/test-results/
 **/playwright-report/
 *.user

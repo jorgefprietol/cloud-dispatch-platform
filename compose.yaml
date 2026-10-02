@@ -93,5 +93,8 @@ services:
     restart: unless-stopped
 networks:
   backend:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-10.203.74.0/24}
 volumes:
   postgres-data:
