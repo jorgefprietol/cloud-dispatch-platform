@@ -4,7 +4,7 @@ COPY apps/console/package*.json ./
 RUN npm ci
 COPY apps/console/ ./
 RUN npm run build
-FROM nginxinc/nginx-unprivileged:1.28-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 USER root
 RUN apk add --no-cache jq
 COPY --from=build --chown=101:101 /src/dist /usr/share/nginx/html
