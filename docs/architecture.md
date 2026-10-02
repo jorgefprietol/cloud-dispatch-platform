@@ -40,4 +40,6 @@ Fargate evita administrar nodos para tres servicios de larga duración. Los cont
 
 Se crean dos NAT Gateways para mantener salida por zona. S3 usa un gateway endpoint. Los endpoints de interfaz no se activan por defecto porque agregan coste fijo; pueden sustituir la salida NAT cuando el perfil de tráfico lo justifique.
 
+Nginx resuelve el upstream periódicamente mediante el DNS de Docker o el resolver de VPC. Esto permite seguir los cambios de IP de las tareas API durante sustituciones y despliegues. El orden de creación de los servicios web y worker depende del servicio API.
+
 RDS, reportes, tabla, backups, clave KMS y repositorios se retienen. Eliminar el stack no elimina esos recursos. El rol GitHub confía únicamente en el environment `production`; los roles de aplicación no comparten ese permiso. El rol CDK de despliegue posee poder de infraestructura mediante los roles bootstrap y exige protección del environment.
