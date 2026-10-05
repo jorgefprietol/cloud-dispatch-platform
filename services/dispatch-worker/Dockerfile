@@ -1,4 +1,4 @@
-FROM maven:3.9-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS build
+FROM maven:3-eclipse-temurin-26@sha256:5bfb178bea156ab53b779b2be338e8bfb45decfed35d83da92f1dd9b7348845c AS build
 WORKDIR /src
 COPY services/dispatch-worker/pom.xml ./
 RUN mvn -B dependency:go-offline
