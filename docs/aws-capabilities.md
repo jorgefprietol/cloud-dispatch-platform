@@ -8,7 +8,7 @@ El diseño agrupa capacidades cloud por problema operativo. La columna de estado
 | Regiones y zonas | VPC con dos AZ y servicios distribuidos | Segunda región cuando los objetivos de continuidad exijan tolerar un fallo regional |
 | Cómputo | ECS Fargate para API, worker y web | EC2/ASG para control del host o cargas estables con optimización de reserva; Spot para procesamiento tolerante a interrupciones |
 | Balanceo | ALB HTTPS, ACM y circuit breaker ECS | NLB para TCP/UDP o IP estática; GWLB para appliances de inspección |
-| Escalado | Políticas por CPU con mínimo 2 y máximo 6 tareas | Ajustar el worker por backlog SQS tras medir tiempo de procesamiento y límites downstream |
+| Escalado | CPU para API/web y backlog SQS para worker; mínimo 2 y máximo 6 tareas | Ajustar umbrales tras medir tiempo de procesamiento y límites downstream |
 | Almacenamiento de bloque | RDS administra su almacenamiento y autoscaling | EBS cifrado para EC2; snapshots para recuperación; instance store solo para datos temporales |
 | Archivos compartidos | No requerido por el flujo de reportes | EFS cuando varias tareas necesiten POSIX; S3 para objetos sin filesystem compartido |
 | Base transaccional | RDS PostgreSQL Multi-AZ, backup y TLS | Aurora para mayor necesidad de lectura, disponibilidad o escalado; read replicas para consultas, no como equivalente de Multi-AZ |
