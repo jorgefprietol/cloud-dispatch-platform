@@ -72,6 +72,22 @@ jobs:
       - run: node scripts/seed.mjs && node scripts/seed.mjs
       - run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: apps/console
+      - name: Scan the tested worker and console images
+        run: |
+          mkdir -p artifacts/security
+          scanner='aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
+          for component in worker web; do
+            image=$(docker compose images -q "$component")
+            test -n "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache/trivy -v "$PWD/artifacts/security:/reports" "$scanner" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --format json --output "/reports/$component-vulnerabilities.json" "$image"
+          done
+      - name: Upload image security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: image-security-evidence
+          path: artifacts/security/
+          retention-days: 14
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: failure()
