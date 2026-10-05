@@ -37,4 +37,4 @@ updates:
       - dependency-name: eclipse-temurin
         update-types: [version-update:semver-major]
       - dependency-name: maven
-        update-types: [version-update:semver-major, version-update:semver-minor]
+        update-types: [version-update:semver-major]
