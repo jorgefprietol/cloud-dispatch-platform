@@ -12,6 +12,9 @@ updates:
   - package-ecosystem: npm
     directory: /apps/console
     schedule: {interval: weekly}
+    groups:
+      console-toolchain:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /infra
     schedule: {interval: weekly}
@@ -21,3 +24,11 @@ updates:
   - package-ecosystem: docker
     directories: [/services/orders-api,/services/dispatch-worker,/services/audit-function,/apps/console]
     schedule: {interval: weekly}
+    # LTS runtime migrations are reviewed together with CI, build and application code.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
+      - dependency-name: maven
+        update-types: [version-update:semver-major]

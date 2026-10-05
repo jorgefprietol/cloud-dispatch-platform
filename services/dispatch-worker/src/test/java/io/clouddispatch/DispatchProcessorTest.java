@@ -1,5 +1,5 @@
 package io.clouddispatch;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
@@ -24,7 +24,7 @@ class DispatchProcessorTest {
         try {
             var s3=mock(S3Client.class);var sns=mock(SnsClient.class);
             var env=new MockEnvironment().withProperty("dispatch.worker-secret","a".repeat(40)).withProperty("dispatch.bucket","reports").withProperty("dispatch.api-url","http://127.0.0.1:"+server.getAddress().getPort()).withProperty("dispatch.topic-arn","arn:aws:sns:us-east-1:111111111111:completed");
-            new DispatchProcessor(new ObjectMapper(),s3,sns,env).process(body);
+            new DispatchProcessor(new JsonMapper(),s3,sns,env).process(body);
             var order=inOrder(s3,sns);order.verify(s3).putObject(any(Consumer.class),any(RequestBody.class));order.verify(sns).publish(any(Consumer.class));
         } finally {server.stop(0);}
     }
@@ -33,7 +33,7 @@ class DispatchProcessorTest {
         try {
             var s3=mock(S3Client.class);var sns=mock(SnsClient.class);
             var env=new MockEnvironment().withProperty("dispatch.worker-secret","a".repeat(40)).withProperty("dispatch.bucket","reports").withProperty("dispatch.api-url","http://127.0.0.1:"+server.getAddress().getPort()).withProperty("dispatch.topic-arn","arn:test");
-            assertThrows(IllegalStateException.class,()->new DispatchProcessor(new ObjectMapper(),s3,sns,env).process(body));verifyNoInteractions(sns);
+            assertThrows(IllegalStateException.class,()->new DispatchProcessor(new JsonMapper(),s3,sns,env).process(body));verifyNoInteractions(sns);
         } finally {server.stop(0);}
     }
 }
