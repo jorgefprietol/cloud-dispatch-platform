@@ -1,3 +1,4 @@
+import {verifyBundle} from './verify-bundle.mjs';
 import {cpSync,readFileSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 const source=resolve('node_modules/brace-expansion');
@@ -9,4 +10,5 @@ if(!existsSync(target))throw new Error('CDK bundle layout changed: review the se
 // fixed package over the bundled implementation, including exports and license.
 cpSync(source,target,{recursive:true,force:true});
 if(JSON.parse(readFileSync(`${target}/package.json`,'utf8')).version!==version)throw new Error('Bundle repair failed');
+verifyBundle();
 console.log(`CDK bundled brace-expansion repaired to ${version}`);

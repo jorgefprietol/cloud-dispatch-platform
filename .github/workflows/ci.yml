@@ -49,6 +49,14 @@ jobs:
         working-directory: apps/console
       - run: npm ci && npm run build && npm test && npm run audit && npm run synth
         working-directory: infra
+      - name: Upload verified CDK security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: infra-security-evidence
+          path: artifacts/security/cdk-bundle.json
+          retention-days: 30
+          if-no-files-found: warn
       - name: Synthesize complete AWS topology offline
         working-directory: infra
         run: |
