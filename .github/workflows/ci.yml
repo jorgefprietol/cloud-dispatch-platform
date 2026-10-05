@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: maven
       - run: mvn -B -f services/dispatch-worker/pom.xml verify
   web-infra:
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
           cache-dependency-path: |
             apps/console/package-lock.json
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '24'
       - run: cp .env.example .env
       - run: docker compose up -d --build
       - run: node scripts/smoke.mjs
@@ -72,6 +72,22 @@ jobs:
       - run: node scripts/seed.mjs && node scripts/seed.mjs
       - run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: apps/console
+      - name: Scan the tested worker and console images
+        run: |
+          mkdir -p artifacts/security
+          scanner='aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
+          for component in worker web; do
+            image=$(docker compose images -q "$component")
+            test -n "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache/trivy -v "$PWD/artifacts/security:/reports" "$scanner" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --format json --output "/reports/$component-vulnerabilities.json" "$image"
+          done
+      - name: Upload image security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: image-security-evidence
+          path: artifacts/security/
+          retention-days: 14
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: failure()

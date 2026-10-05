@@ -40,7 +40,7 @@ La ejecuciÃ³n local usa PostgreSQL, Redis y LocalStack para SQS/S3. La rama de a
 
 ## Ejecutar localmente
 
-Requisitos: Docker con Compose y Node.js 22 para las verificaciones. Para compilar fuera de Docker: .NET 10 y JDK 21 / Maven 3.9.
+Requisitos: Docker con Compose y Node.js 24 LTS para las verificaciones. Para compilar fuera de Docker: .NET 10 y JDK 25 LTS / Maven 3.9.
 
 ```powershell
 Copy-Item .env.example .env
@@ -102,3 +102,9 @@ AWS requiere cuenta, regiÃ³n, dominio, certificado ACM y las variables documenta
 El sistema entrega eventos al menos una vez. La idempotencia protege el pedido y el reporte; las notificaciones SNS pueden repetirse. Los indicadores pueden retrasarse hasta 10 segundos. Las garantÃ­as de disponibilidad, rendimiento y recuperaciÃ³n deben medirse en la cuenta de destino antes de establecer compromisos operativos.
 
 Licencia MIT.
+
+## Actualizaciones de dependencias
+
+La consola utiliza Vite 8, el plugin React 6, TypeScript 7 y Lucide 1; sus actualizaciones se prueban juntas. El worker utiliza Spring Boot 4.1 con Jackson 3 (`JsonMapper`) y Java 25 LTS tanto al compilar como al ejecutar. Las imágenes base quedan fijadas por digest. Node 24 LTS se mantiene hasta revisar una migración de runtime; Node 26 está en fase Current y Java 24 terminó su soporte. CI verifica compilación, contratos, despacho, idempotencia y descarga del reporte antes de publicar.
+
+El worker fija Tomcat 11.0.26 y el BOM de Jackson 3.1.7 para incluir parches posteriores al BOM de Spring Boot 4.1.1. Al actualizar Spring Boot se revisan estos overrides. CI analiza las imágenes efectivamente probadas de worker y consola y bloquea vulnerabilidades HIGH/CRITICAL con corrección disponible; conserva los informes como evidencia.
