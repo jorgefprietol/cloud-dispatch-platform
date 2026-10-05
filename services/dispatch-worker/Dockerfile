@@ -1,4 +1,9 @@
-FROM maven:3.9-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS build
+FROM maven:3.9-eclipse-temurin-26@sha256:b2c1ad85954592f9928e84327c65201f308ad9b5d8ed7d5b823717c97bf23fbb AS maven_distribution
+# Copy Maven tools only; the JDK bundled with their source image is never executed.
+FROM eclipse-temurin:25-jdk-noble@sha256:589ff4cc3f71aab462e7048a47a0d10edf57fbccde3fceea2281e610bf5880b4 AS build
+COPY --from=maven_distribution /usr/share/maven /usr/share/maven
+ENV MAVEN_HOME="/usr/share/maven" PATH="/usr/share/maven/bin:${PATH}"
+RUN java -version 2>&1 | grep -E 'version "25[.]' && mvn -version
 WORKDIR /src
 COPY services/dispatch-worker/pom.xml ./
 RUN mvn -B dependency:go-offline
