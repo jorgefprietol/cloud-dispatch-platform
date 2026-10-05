@@ -105,6 +105,8 @@ Licencia MIT.
 
 ## Actualizaciones de dependencias
 
-La consola utiliza Vite 8, el plugin React 6, TypeScript 7 y Lucide 1; sus actualizaciones se prueban juntas. El worker utiliza Spring Boot 4.1 con Jackson 3 (`JsonMapper`) y Java 25 LTS tanto al compilar como al ejecutar. Las im·genes base quedan fijadas por digest. Node 24 LTS se mantiene hasta revisar una migraciÛn de runtime; Node 26 est· en fase Current y Java 24 terminÛ su soporte. CI verifica compilaciÛn, contratos, despacho, idempotencia y descarga del reporte antes de publicar.
+La consola utiliza Vite 8, el plugin React 6, TypeScript 7 y Lucide 1; sus actualizaciones se prueban juntas. El worker utiliza Spring Boot 4.1 con Jackson 3 (`JsonMapper`) y Java 25 LTS tanto al compilar como al ejecutar. Las im√°genes base quedan fijadas por digest. Node 24 LTS se mantiene hasta revisar una migraci√≥n de runtime; Node 26 est√° en fase Current y Java 24 termin√≥ su soporte. CI verifica compilaci√≥n, contratos, despacho, idempotencia y descarga del reporte antes de publicar.
 
-El worker fija Tomcat 11.0.26 y el BOM de Jackson 3.1.7 para incluir parches posteriores al BOM de Spring Boot 4.1.1. Al actualizar Spring Boot se revisan estos overrides. CI analiza las im·genes efectivamente probadas de worker y consola y bloquea vulnerabilidades HIGH/CRITICAL con correcciÛn disponible; conserva los informes como evidencia.
+El worker fija Tomcat 11.0.26 y el BOM de Jackson 3.1.7 para incluir parches posteriores al BOM de Spring Boot 4.1.1. Al actualizar Spring Boot se revisan estos overrides. CI analiza las im√°genes efectivamente probadas de worker y consola y bloquea vulnerabilidades HIGH/CRITICAL con correcci√≥n disponible; conserva los informes como evidencia.
+
+Los tipos de Node de la consola permanecen en la serie 24. Las acciones de GitHub se actualizan como grupo y conservan referencias por SHA. El despliegue manual a AWS usa la misma serie Node 24 que CI; no se ejecuta por actualizar dependencias. El builder Maven conserva la serie 3.9 con Java 25 y admite parches y cambios de digest; las migraciones de serie requieren revisi√≥n conjunta.
