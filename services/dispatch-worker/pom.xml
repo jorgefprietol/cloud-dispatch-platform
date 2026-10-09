@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>4.1.1</version><relativePath/></parent>
   <groupId>io.clouddispatch</groupId><artifactId>dispatch-worker</artifactId><version>1.0.0</version>
-  <properties><java.version>25</java.version><aws.version>2.55.10</aws.version><tomcat.version>11.0.26</tomcat.version><jackson-bom.version>3.1.7</jackson-bom.version></properties>
+  <properties><java.version>25</java.version><aws.version>2.55.11</aws.version><tomcat.version>11.0.26</tomcat.version><jackson-bom.version>3.1.7</jackson-bom.version></properties>
   <dependencyManagement><dependencies><dependency><groupId>software.amazon.awssdk</groupId><artifactId>bom</artifactId><version>${aws.version}</version><type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
