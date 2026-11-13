@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY services/audit-function/Audit.Function.csproj services/audit-function/packages.lock.json ./
 RUN dotnet restore --locked-mode
