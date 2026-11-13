@@ -4,7 +4,7 @@ COPY services/orders-api/Orders.Api.csproj services/orders-api/packages.lock.jso
 RUN dotnet restore --locked-mode
 COPY services/orders-api/ ./
 RUN dotnet publish -c Release --no-restore -o /app
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 WORKDIR /app
 COPY --from=build /app ./
 ADD --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/rds-ca-bundle.pem
